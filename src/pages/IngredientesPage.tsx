@@ -5,7 +5,6 @@ interface IngredienteItem {
   id?: number;
   ingrediente: string;
   quantidade: string;
-  pizza?: { id: number };
 }
 
 const IngredientesPage: React.FC = () => {
@@ -14,10 +13,9 @@ const IngredientesPage: React.FC = () => {
   const [error, setError] = useState('');
   const [ingrediente, setIngrediente] = useState('');
   const [quantidade, setQuantidade] = useState('');
-  const [pizzaId, setPizzaId] = useState<number | ''>('');
   const [editId, setEditId] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [pizzas, setPizzas] = useState<{ id: number; nome: string }[]>([]);
+  const [mensagem, setMensagem] = useState<string | null>(null);
 
   const fetchIngredientes = async () => {
     setLoading(true);
@@ -28,7 +26,7 @@ const IngredientesPage: React.FC = () => {
       if (token) {
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
-          setIsAdmin(payload.sub === 'admin');
+          setIsAdmin(payload.sub === 'admin@admin.com');
         } catch {
           setIsAdmin(false);
         }
@@ -42,7 +40,6 @@ const IngredientesPage: React.FC = () => {
 
   useEffect(() => {
     fetchIngredientes();
-    apiRequest('/pizza').then(setPizzas).catch(() => setPizzas([]));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,28 +53,28 @@ const IngredientesPage: React.FC = () => {
       ingrediente,
       quantidade
     };
-    if (pizzaId) {
-      ingredienteData.pizza = { id: pizzaId };
-    }
     try {
       if (editId) {
         await apiRequest(`/ingredientes/${editId}`, {
           method: 'PUT',
-          body: JSON.stringify(ingredienteData)
+          body: JSON.stringify({ ingrediente, quantidade })
         });
+        setMensagem('Ingrediente editado com sucesso!');
       } else {
         await apiRequest('/ingredientes', {
           method: 'POST',
-          body: JSON.stringify(ingredienteData)
+          body: JSON.stringify({ ingrediente, quantidade })
         });
+        setMensagem('Ingrediente cadastrado com sucesso!');
       }
       setIngrediente('');
       setQuantidade('');
-      setPizzaId('');
       setEditId(null);
       fetchIngredientes();
     } catch (err: any) {
       setError('Erro ao salvar ingrediente.');
+    } finally {
+      if (!mensagem) setTimeout(() => setMensagem(null), 2000);
     }
   };
 
@@ -85,19 +82,18 @@ const IngredientesPage: React.FC = () => {
     setEditId(ing.id || null);
     setIngrediente(ing.ingrediente);
     setQuantidade(ing.quantidade);
-    setPizzaId(ing.pizza?.id ?? '');
   };
 
   const handleCancel = () => {
     setEditId(null);
     setIngrediente('');
     setQuantidade('');
-    setPizzaId('');
   };
 
   return (
     <div className="container mt-5">
       <h2>Ingredientes</h2>
+      {mensagem && <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3" style={{zIndex:9999, minWidth:300}}>{mensagem}</div>}
       {isAdmin && (
         <form className="mb-4" onSubmit={handleSubmit}>
           <div className="row g-2 align-items-end">
@@ -107,16 +103,8 @@ const IngredientesPage: React.FC = () => {
             <div className="col-md-3">
               <input type="text" className="form-control" placeholder="Quantidade (ex: 200g)" value={quantidade} onChange={e => setQuantidade(e.target.value)} required />
             </div>
-            <div className="col-md-3">
-              <select className="form-select" value={pizzaId} onChange={e => setPizzaId(Number(e.target.value))}>
-                <option value="">(Opcional) Vincular a pizza</option>
-                {pizzas.map(pizza => (
-                  <option key={pizza.id} value={pizza.id}>{pizza.nome}</option>
-                ))}
-              </select>
-            </div>
             <div className="col-md-2">
-              <button type="submit" className="btn btn-success w-100">{editId ? 'Salvar' : 'Cadastrar'}</button>
+              <button type="submit" className="btn btn-success w-100">Cadastrar Ingrediente</button>
             </div>
           </div>
           {editId && <button type="button" className="btn btn-secondary mt-2" onClick={handleCancel}>Cancelar edição</button>}
@@ -131,7 +119,6 @@ const IngredientesPage: React.FC = () => {
             <tr>
               <th>Ingrediente</th>
               <th>Quantidade</th>
-              <th>Pizza</th>
               {isAdmin && <th>Ações</th>}
             </tr>
           </thead>
@@ -140,10 +127,22 @@ const IngredientesPage: React.FC = () => {
               <tr key={ing.id}>
                 <td>{ing.ingrediente}</td>
                 <td>{ing.quantidade}</td>
-                <td>{ing.pizza?.id}</td>
                 {isAdmin && (
                   <td>
                     <button className="btn btn-sm btn-primary me-2" onClick={() => handleEdit(ing)}>Editar</button>
+                    <button className="btn btn-sm btn-danger" onClick={async () => {
+                      if (window.confirm('Tem certeza que deseja excluir este ingrediente?')) {
+                        try {
+                          await apiRequest(`/ingredientes/${ing.id}`, { method: 'DELETE' });
+                          setMensagem('Ingrediente excluído com sucesso!');
+                          fetchIngredientes();
+                          setTimeout(() => setMensagem(null), 2000);
+                        } catch {
+                          setMensagem('Erro ao excluir ingrediente.');
+                          setTimeout(() => setMensagem(null), 2000);
+                        }
+                      }
+                    }}>Excluir</button>
                   </td>
                 )}
               </tr>

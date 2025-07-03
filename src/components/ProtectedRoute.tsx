@@ -1,11 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-// Função para checar autenticação (mock inicial)
-const isAuthenticated = () => {
-  return !!localStorage.getItem('token');
-};
-
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const token = localStorage.getItem('token');
   let isValid = false;

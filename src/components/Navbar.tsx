@@ -7,6 +7,18 @@ const Navbar: React.FC = () => {
 
   if (!isLoggedIn) return null;
 
+  const getIsAdmin = () => {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.sub === 'admin@admin.com';
+    } catch {
+      return false;
+    }
+  };
+  const isAdmin = getIsAdmin();
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
       <div className="container">
@@ -31,9 +43,11 @@ const Navbar: React.FC = () => {
             <li className="nav-item">
               <Link className={`nav-link${location.pathname === '/pedidos' ? ' active' : ''}`} to="/pedidos">Meus Pedidos</Link>
             </li>
-            <li className="nav-item">
-              <Link className={`nav-link${location.pathname === '/pizzas' ? ' active' : ''}`} to="/pizzas">Cadastro de Pizza</Link>
-            </li>
+            {isAdmin && (
+              <li className="nav-item">
+                <Link className={`nav-link${location.pathname === '/cadastro-cliente' ? ' active' : ''}`} to="/cadastro-cliente">Cadastro de Cliente</Link>
+              </li>
+            )}
           </ul>
           <ul className="navbar-nav ms-auto">
             <li className="nav-item">

@@ -11,15 +11,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { CarrinhoProvider } from './components/CarrinhoContext';
+import CadastroClientePage from './pages/CadastroClientePage';
 
 function App() {
   useEffect(() => {
-    // Checa expiração do token a cada navegação
     const checkToken = () => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          // Decodifica o payload do JWT
           const payload = JSON.parse(atob(token.split('.')[1]));
           if (payload.exp && Date.now() / 1000 > payload.exp) {
             localStorage.removeItem('token');
@@ -48,6 +47,7 @@ function App() {
           <Route path="/carrinho" element={<ProtectedRoute><CarrinhoPage /></ProtectedRoute>} />
           <Route path="/pagamento" element={<ProtectedRoute><PagamentoPage /></ProtectedRoute>} />
           <Route path="/pedidos" element={<ProtectedRoute><PedidosPage /></ProtectedRoute>} />
+          <Route path="/cadastro-cliente" element={<CadastroClientePage />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Router>

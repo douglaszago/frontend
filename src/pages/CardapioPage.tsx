@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../api';
+import { useNavigate } from 'react-router-dom';
+import { useCarrinho } from '../components/CarrinhoContext';
 
 interface CardapioItem {
   id: number;
-  pizza: { id: number; nome: string };
+  pizza: { id: number; sabor: string };
   preco: number;
   tamanho: string;
 }
 
 interface Pizza {
   id: number;
-  nome: string;
+  sabor: string;
 }
 
 const CardapioPage: React.FC = () => {
@@ -25,6 +25,8 @@ const CardapioPage: React.FC = () => {
   const [pizzaId, setPizzaId] = useState<number | ''>('');
   const [tamanho, setTamanho] = useState('');
   const [pizzas, setPizzas] = useState<Pizza[]>([]);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const { adicionar } = useCarrinho();
   const navigate = useNavigate();
 
   const fetchCardapio = async () => {
@@ -50,7 +52,6 @@ const CardapioPage: React.FC = () => {
 
   useEffect(() => {
     fetchCardapio();
-    // Buscar pizzas para o select
     apiRequest('/pizza').then(setPizzas).catch(() => setPizzas([]));
   }, []);
 
@@ -76,11 +77,13 @@ const CardapioPage: React.FC = () => {
           method: 'PUT',
           body: JSON.stringify(itemData)
         });
+        setMensagem('Item do cardápio editado com sucesso!');
       } else {
         await apiRequest('/cardapio', {
           method: 'POST',
           body: JSON.stringify(itemData)
         });
+        setMensagem('Item do cardápio cadastrado com sucesso!');
       }
       setPizzaId('');
       setPreco('');
@@ -89,6 +92,8 @@ const CardapioPage: React.FC = () => {
       fetchCardapio();
     } catch (err: any) {
       setError('Erro ao salvar item do cardápio.');
+    } finally {
+      if (!mensagem) setTimeout(() => setMensagem(null), 2000);
     }
   };
 
@@ -106,17 +111,22 @@ const CardapioPage: React.FC = () => {
     setTamanho('');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+  // Função auxiliar para obter o sabor da pizza pelo id
+  const getPizzaSabor = (item: CardapioItem) => {
+    if (item.pizza && (item.pizza as any).sabor) return (item.pizza as any).sabor;
+    if (pizzas.length > 0) {
+      const found = pizzas.find(p => p.id === item.pizza.id);
+      if (found && (found as any).sabor) return (found as any).sabor;
+    }
+    return '-';
   };
 
   return (
     <div className="container mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Cardápio</h2>
-        <button className="btn btn-outline-danger" onClick={handleLogout}>Logout</button>
       </div>
+      {mensagem && <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3" style={{zIndex:9999, minWidth:300}}>{mensagem}</div>}
       {isAdmin && (
         <form className="mb-4" onSubmit={handleSubmit}>
           <div className="row g-2 align-items-end">
@@ -124,7 +134,7 @@ const CardapioPage: React.FC = () => {
               <select className="form-select" value={pizzaId} onChange={e => setPizzaId(Number(e.target.value))} required>
                 <option value="">Selecione a pizza</option>
                 {pizzas.map(pizza => (
-                  <option key={pizza.id} value={pizza.id}>{pizza.nome}</option>
+                  <option key={pizza.id} value={pizza.id}>{pizza.sabor}</option>
                 ))}
               </select>
             </div>
@@ -151,15 +161,38 @@ const CardapioPage: React.FC = () => {
               <th>Pizza</th>
               <th>Tamanho</th>
               <th>Preço</th>
+              {!isAdmin && <th></th>}
               {isAdmin && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
             {itens.map((item) => (
               <tr key={item.id}>
-                <td>{item.pizza.nome}</td>
+                <td>{getPizzaSabor(item)}</td>
                 <td>{item.tamanho}</td>
-                <td>R$ {item.preco.toFixed(2)}</td>
+                <td>
+                  {item.preco !== undefined
+                    ? `R$ ${item.preco.toFixed(2)}`
+                    : (item as any).valor !== undefined
+                    ? `R$ ${(item as any).valor.toFixed(2)}`
+                    : '-'}
+                </td>
+                {!isAdmin && (
+                  <td>
+                    <button
+                      className="btn btn-sm btn-success"
+                      onClick={async () => {
+                        await adicionar({
+                          pizzaId: item.pizza.id,
+                          sabor: getPizzaSabor(item),
+                          preco: item.preco
+                        });
+                        setMensagem('Pizza adicionada ao carrinho!');
+                        setTimeout(() => setMensagem(null), 2000);
+                      }}
+                    >Adicionar ao carrinho</button>
+                  </td>
+                )}
                 {isAdmin && (
                   <td>
                     <button className="btn btn-sm btn-primary me-2" onClick={() => handleEdit(item)}>Editar</button>

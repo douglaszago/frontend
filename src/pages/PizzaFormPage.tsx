@@ -63,7 +63,7 @@ const PizzaFormPage: React.FC<{ pizza?: Pizza; onSave: () => void }> = ({ pizza,
       setError('Preencha todos os campos.');
       return;
     }
-    const payload: PizzaForm = {
+    const payload = {
       sabor,
       ingredientes,
       cardapio

@@ -1,4 +1,3 @@
-// src/api.ts
 const API_URL = 'http://localhost:8080';
 
 export function getToken() {
@@ -8,9 +7,9 @@ export function getToken() {
 export async function apiRequest(endpoint: string, options: any = {}) {
   const token = getToken();
   const headers = {
-    'Authorization': token ? `Bearer ${token}` : '',
+    ...(options.headers || {}),
     'Content-Type': 'application/json',
-    ...options.headers
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
@@ -19,5 +18,8 @@ export async function apiRequest(endpoint: string, options: any = {}) {
   if (!response.ok) {
     throw new Error('Erro na requisição');
   }
-  return response.json();
+  // Se for 204 ou corpo vazio, não tente fazer .json()
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
